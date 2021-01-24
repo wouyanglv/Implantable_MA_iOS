@@ -180,6 +180,10 @@ struct AppendToast: Action {
     let message: ToastMessage
 }
 
+struct AutoSave: Action {
+    let peripheral: CBPeripheral
+}
+
 struct ProcessToast: Action {}
 
 struct Tick: Action {}
@@ -207,7 +211,29 @@ func appReducer(action: Action, state: AppState?) -> AppState {
     case let action as RequestDisconnect:
         state.ble?.centralManager.cancelPeripheralConnection(action.peripheral)
     case let action as DidDisconnect:
-        let _ = getPeripheral(&state, action.peripheral)
+        //let _ = getPeripheral(&state, action.peripheral)
+        
+        //added by Wei Ouyang to enable reconnection
+        
+        let peripheral = getPeripheral(&state, action.peripheral)
+        let myName = peripheral.name()
+        if let measurement = peripheral.activeMeasurement,
+           let hz = peripheral.signalHz {
+            // Pause
+            ACTION_DISPATCH(action: StopMeasurement(peripheral: peripheral.cbp))
+            DISPATCH.execute {
+                // Archive
+                guard let archive = measurement.archive(hz: Float(hz), rateScaler: 1, deviceName: String(myName)) else {
+                    LOGGER.error("Cannot export archive because archiving failed")
+                    return
+                }}
+            state.ble?.centralManager.connect(action.peripheral, options: nil)
+            state.activePeripheral = action.peripheral.identifier
+        ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
+        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
+        }
+        
+        
     case let action as DidFailToConnect:
         let _ = getPeripheral(&state, action.peripheral)
     case let action as DidUpdateValueForBattery:
@@ -362,6 +388,35 @@ func appReducer(action: Action, state: AppState?) -> AppState {
         saveOften(&state, peripheral)
     case let action as AppendToast:
         state.toastQueue.append(action.message)
+        
+        
+    // Added by Wei Ouyang to automatically save with a certain time interval.
+    case let action as AutoSave:
+        let peripheral = getPeripheral(&state, action.peripheral)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3600) {
+            let myName = peripheral.name()
+            if let measurement = peripheral.activeMeasurement,
+               let hz = peripheral.signalHz {
+                // Pause
+                ACTION_DISPATCH(action: StopMeasurement(peripheral: peripheral.cbp))
+                DISPATCH.execute {
+                    // Archive
+                    guard let archive = measurement.archive(hz: Float(hz), rateScaler: 1, deviceName: String(myName)) else {
+                        LOGGER.error("Cannot export archive because archiving failed")
+                        return
+                    }}
+            
+            ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
+            ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
+            }
+            
+        }
+        
+    
+        
+        
+        
+        
     case _ as ProcessToast:
         state.toastQueue.removeFirst()
     case _ as Tick:

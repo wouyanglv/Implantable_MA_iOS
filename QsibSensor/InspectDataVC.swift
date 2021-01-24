@@ -171,15 +171,19 @@ class InspectDataVC: UITableViewController, StoreSubscriber {
                     switch measurementState {
                     case .initial:
                         ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
+                        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
                     case .paused:
                         ACTION_DISPATCH(action: ResumeMeasurement(peripheral: peripheral.cbp))
+                        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
                     case .running:
                         ACTION_DISPATCH(action: PauseMeasurement(peripheral: peripheral.cbp))
+                        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
                     case .ended:
                         LOGGER.debug("Ignoring selection with ended active measurement on \(indexPath)")
                     }
                 } else {
                     ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
+                    ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
                 }
             case 3:
                 LOGGER.debug("Selected stop measurement ...")
@@ -199,8 +203,11 @@ class InspectDataVC: UITableViewController, StoreSubscriber {
                 }
             case 4:
                 LOGGER.debug("Selected save and export measurement ...")
+                
+                let myName = peripheral.name()
+                
                 if let measurement = peripheral.activeMeasurement,
-                    let hz = peripheral.signalHz {
+                   let hz = peripheral.signalHz {
                     
                     LOGGER.debug("Stopping for export from \(measurement.state)")
                     
@@ -212,7 +219,7 @@ class InspectDataVC: UITableViewController, StoreSubscriber {
                     
                     DISPATCH.execute {
                         // Archive
-                        guard let archive = measurement.archive(hz: Float(hz), rateScaler: 1) else {
+                        guard let archive = measurement.archive(hz: Float(hz), rateScaler: 1, deviceName: String(myName)) else {
                             LOGGER.error("Cannot export archive because archiving failed")
                             return
                         }
@@ -342,7 +349,7 @@ class InspectDataVC: UITableViewController, StoreSubscriber {
             cell.timestamps = graphableTimestamps
             cell.channel = graphableChannels[indexPath.section - 1]
             LOGGER.trace("Updating channel \(indexPath.section - 1) with \(cell.timestamps.count) (\(cell.channel.count)) values")
-            cell.dataLabel = "Acceleration (a.u.) [4g = 16384 a.u.]"
+            cell.dataLabel = "Acceleration (a.u.) [2g = 16384 a.u.]"
             cell.colorIndex = indexPath.section
             cell.chartView.delegate = cell
             cell.updateChartView()

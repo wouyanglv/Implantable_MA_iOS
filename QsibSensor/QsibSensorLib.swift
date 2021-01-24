@@ -181,7 +181,7 @@ class QsMeasurement {
         }
     }
     
-    public func archive(hz: Float, rateScaler: Float) -> URL? {
+    public func archive(hz: Float, rateScaler: Float, deviceName: String) -> URL? {
         LOGGER.debug("Archiving QsMeasurement \(self.rs_id) ...")
         
         guard let (numTimestamps, archivableTimestamps) = self.interpretTimestamps(hz: hz, rateScaler: rateScaler, targetCardinality: nil) else {
@@ -226,7 +226,7 @@ class QsMeasurement {
         formatter.timeZone = TimeZone.current
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         let dateString = formatter.string(from: now)
-        let zipFilePath = directoryUrl.appendingPathComponent("MA_data_"+dateString+".zip")
+        let zipFilePath = directoryUrl.appendingPathComponent(deviceName + "_" + dateString + ".zip")
         
         try? FileManager.default.removeItem(at: zipFilePath)
         guard FileManager.default.createFile(atPath: zipFilePath.path, contents: archive.data, attributes: nil) else {
