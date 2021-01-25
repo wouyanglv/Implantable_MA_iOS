@@ -211,7 +211,7 @@ func appReducer(action: Action, state: AppState?) -> AppState {
     case let action as RequestDisconnect:
         state.ble?.centralManager.cancelPeripheralConnection(action.peripheral)
     case let action as DidDisconnect:
-        //let _ = getPeripheral(&state, action.peripheral)
+        let _ = getPeripheral(&state, action.peripheral)
         
         //added by Wei Ouyang to enable reconnection
         
@@ -227,10 +227,10 @@ func appReducer(action: Action, state: AppState?) -> AppState {
                     LOGGER.error("Cannot export archive because archiving failed")
                     return
                 }}
-            state.ble?.centralManager.connect(action.peripheral, options: nil)
-            state.activePeripheral = action.peripheral.identifier
-        ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
-        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
+//            state.ble?.centralManager.connect(action.peripheral, options: nil)
+//            state.activePeripheral = action.peripheral.identifier
+//        ACTION_DISPATCH(action: StartMeasurement(peripheral: peripheral.cbp))
+//        ACTION_DISPATCH(action: AutoSave(peripheral: peripheral.cbp))
         }
         
         
@@ -393,7 +393,7 @@ func appReducer(action: Action, state: AppState?) -> AppState {
     // Added by Wei Ouyang to automatically save with a certain time interval.
     case let action as AutoSave:
         let peripheral = getPeripheral(&state, action.peripheral)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3600) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1800) {
             let myName = peripheral.name()
             if let measurement = peripheral.activeMeasurement,
                let hz = peripheral.signalHz {
